@@ -1,0 +1,23 @@
+{
+  "name": "music-inspector",
+  "version": "1.2.0",
+  "description": "A simple web UI to inspect and play recent music additions from a directory.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "music",
+    "inspector",
+    "slskd",
+    "express",
+    "node"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ejs": "^3.1.9",
+    "express": "^4.18.2"
+  }
+}

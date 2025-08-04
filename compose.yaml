@@ -1,0 +1,12 @@
+services:
+  music-inspector:
+    build: ./build
+    container_name: music-inspector
+    restart: unless-stopped
+    ports:
+      - '8292:8292'
+    environment:
+      - PORT=8292
+      - MUSIC_DIR=/app/music
+    volumes:
+      - ./music:/app/music:ro

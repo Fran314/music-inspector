@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Inspector</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Music Inspector</h1>
+
+        <div class="player-container">
+            <audio id="audio-player" controls>
+                Your browser does not support the audio element.
+            </audio>
+
+            <input type="search" id="search-input" placeholder="Search tracks...">
+            
+            <div id="now-playing">Select a track to play</div>
+        </div>
+
+        <ul id="music-list">
+            <% files.forEach(file => { %>
+                <li class="track-item" data-path="<%= file.path %>">
+                    <%= file.path %>
+                </li>
+            <% }) %>
+        </ul>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const audioPlayer = document.getElementById('audio-player');
+            const nowPlaying = document.getElementById('now-playing');
+            const musicList = document.getElementById('music-list');
+            const searchInput = document.getElementById('search-input');
+            const trackItems = musicList.querySelectorAll('.track-item');
+            let currentTrackItem = null;
+
+            searchInput.addEventListener('input', () => {
+                const searchTerm = searchInput.value.toLowerCase();
+                trackItems.forEach(item => {
+                    const trackPath = item.dataset.path.toLowerCase();
+                    const isVisible = trackPath.includes(searchTerm);
+                    item.classList.toggle('hidden', !isVisible);
+                });
+            });
+
+            musicList.addEventListener('click', (event) => {
+                if (event.target && event.target.matches('li.track-item')) {
+                    const trackPath = event.target.getAttribute('data-path');
+                    if (trackPath) {
+                        audioPlayer.src = `/play/${encodeURIComponent(trackPath)}`;
+                        audioPlayer.play();
+                        nowPlaying.textContent = `Now Playing: ${trackPath}`;
+
+                        if (currentTrackItem) {
+                            currentTrackItem.classList.remove('playing');
+                        }
+                        currentTrackItem = event.target;
+                        currentTrackItem.classList.add('playing');
+                    }
+                }
+            });
+
+            audioPlayer.addEventListener('play', (event) => {
+                if (!audioPlayer.currentSrc) {
+                    audioPlayer.pause();
+                    nowPlaying.classList.add('no-track-feedback');
+                    nowPlaying.addEventListener('animationend', () => {
+                        nowPlaying.classList.remove('no-track-feedback');
+                    }, { once: true });
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.target === searchInput) {
+                    return;
+                }
+
+
+                if (event.key === '/' || (event.code === 'KeyF' && event.ctrlKey)) {
+                    event.preventDefault();
+                    searchInput.focus();
+                    searchInput.select();
+                    return;
+                }
+
+                if (event.shiftKey && (event.code === 'ArrowRight' || event.code === 'ArrowLeft')) {
+                    event.preventDefault();
+
+                    if (!currentTrackItem) return;
+
+                    const visibleTracks = Array.from(musicList.querySelectorAll('.track-item:not(.hidden)'));
+                    if (visibleTracks.length < 2) return;
+
+                    const currentIndex = visibleTracks.findIndex(track => track === currentTrackItem);
+                    if (currentIndex === -1) return;
+
+                    const nextIndex = (event.code === 'ArrowRight') ? currentIndex + 1 : currentIndex - 1;
+
+                    if (nextIndex >= 0 && nextIndex < visibleTracks.length) {
+                        visibleTracks[nextIndex].click();
+                    }
+                    return;
+                }
+
+                switch (event.code) {
+                    case 'Space':
+                        event.preventDefault();
+                        if (audioPlayer.paused) audioPlayer.play();
+                        else audioPlayer.pause();
+                        break;
+                    case 'ArrowRight':
+                        event.preventDefault();
+                        if (audioPlayer.currentSrc) audioPlayer.currentTime += 5;
+                        break;
+                    case 'ArrowLeft':
+                        event.preventDefault();
+                        if (audioPlayer.currentSrc) audioPlayer.currentTime -= 5;
+                        break;
+                    case 'ArrowUp':
+                        event.preventDefault();
+                        audioPlayer.volume = Math.min(1, audioPlayer.volume + 0.05);
+                        break;
+                    case 'ArrowDown':
+                        event.preventDefault();
+                        audioPlayer.volume = Math.max(0, audioPlayer.volume - 0.05);
+                        break;
+                    case 'KeyM':
+                        event.preventDefault();
+                        audioPlayer.muted = !audioPlayer.muted;
+                        break;
+                }
+            });
+
+            audioPlayer.addEventListener('error', () => {
+                console.error('Error playing audio.');
+                nowPlaying.textContent = `Error: Could not play track.`;
+                if(currentTrackItem) {
+                    currentTrackItem.classList.remove('playing');
+                    currentTrackItem.classList.add('error');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
