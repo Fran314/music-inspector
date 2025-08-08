@@ -1,30 +1,42 @@
-# --- Base Stage ---
-# Use an official Node.js runtime as a parent image.
-# The 'alpine' variant is lightweight and good for production.
-FROM node:20-alpine
+# Stage 1: Build the application using a lean Node.js image
+FROM node:20-alpine AS builder
 
-# Set the working directory inside the container
+# Set the working directory in the container
 WORKDIR /app
 
-# --- Dependencies ---
-# Copy package.json and package-lock.json first.
-# This leverages Docker's layer caching. The npm install step will only be
-# re-run if these files change, speeding up subsequent builds.
+# Copy package.json and package-lock.json (if available) to leverage Docker layer caching
 COPY package*.json ./
 
-# Install app dependencies using 'npm ci' which is faster and more reliable
-# for production builds as it uses the package-lock.json.
-RUN npm ci
+# Install only production dependencies using 'npm ci' for fast, reliable builds
+# The --omit=dev flag ensures that development dependencies are not installed.
+RUN npm ci --omit=dev
 
-# --- Application Code ---
-# Copy the rest of the application source code into the container.
-# Files listed in .dockerignore will be excluded.
+# Copy the rest of the application source code into the builder stage
 COPY . .
 
-# --- Runtime ---
-# The application listens on port 3000, so we expose it.
-# This is documentation; the actual port mapping happens in docker-compose.yml.
-EXPOSE 3000
+# ---
 
-# Define the command to run your app
-CMD [ "npm", "start" ]
+# Stage 2: Create the final, minimal, and secure distroless image
+FROM gcr.io/distroless/nodejs20-debian12
+
+# Set the working directory in the final image
+WORKDIR /app
+
+# Distroless images come with a pre-configured 'nonroot' user (UID 65532).
+# Switching to this user is a critical security best practice to avoid running as root.
+USER nonroot
+
+# Copy the application and its production dependencies from the builder stage
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/index.js ./index.js
+COPY --from=builder /app/assets ./assets
+
+# Expose the port the application listens on.
+# This port must be greater than 1024 for a non-root user to bind to it.
+EXPOSE 8292
+
+# Define the command to run the application.
+# The distroless nodejs image has an entrypoint set to "node", so we just need
+# to provide the script name as the command.
+CMD ["index.js"]

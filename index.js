@@ -85,9 +85,10 @@ app.get('/icon.svg', (req, res) => {
     res.sendFile(path.join(__dirname, 'assets', 'icon.svg'))
 })
 
-app.get('/play/:filePath(*)', (req, res) => {
+app.get('/play/*filePath', (req, res) => {
     // The (*) in the route parameter allows file paths with slashes.
-    const filePathParam = req.params.filePath
+    const filePathParam = req.params.filePath[0]
+    console.log(filePathParam)
     const fullFilePath = path.join(MUSIC_DIR, filePathParam)
 
     if (!fullFilePath.startsWith(MUSIC_DIR)) {
